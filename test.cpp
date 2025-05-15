@@ -21,11 +21,19 @@ public:
 private:
     /* Set name variable to be private */
     std::string name;
+    // double input1;
+    // double input2;
+public:
     double input1;
     double input2;
 };
 
-
+void demonstratePointer() {
+    Greeter* greeterPtr = new Greeter("Pointer Example", 3.5, 4.5);
+    greeterPtr->sayHello();
+    std::cout << "Addition result using pointer: " << greeterPtr->add() << std::endl;
+    delete greeterPtr; // Free the allocated memory
+}
 
 int main() {
     /* declaration */
@@ -36,5 +44,8 @@ int main() {
     greeter.sayHello();
     result = greeter.add();
     std::cout << result << std::endl;
+
+    /* Pointer example */
+    demonstratePointer();
     return 0;
 }
