@@ -30,6 +30,11 @@ class List
 {
 private:
 
+    /* Node structur has following: 
+        - data contains values of node
+        - previous pointer *prev that points to previous node
+        - next     pointer *next that points to the next node
+    */
     struct Node
     {
         Object  data;
@@ -55,12 +60,14 @@ private:
             const Object & operator* ( ) const
             { return retrieve( ); }
             
+            // usage: ++itr : pre-increment: increase iterator first then return increamented value
             const_iterator & operator++ ( )
             {
                 current = current->next;
                 return *this;
             }
             
+            // usage: itr++ : post increment: return current value first then increase iterator
             const_iterator operator++ ( int )
             {
                 const_iterator old = *this;
@@ -68,12 +75,14 @@ private:
                 return old;
             }
             
+            // usage: --itr : pre-decrement: decrease iterator first then return decremented value
             const_iterator & operator-- ( )
             {
                 current = current->prev;
                 return *this;
             }
             
+            // usage itr-- : post-decrement: return current value (that itr points to) then decrease iterator
             const_iterator operator-- ( int )
             {
                 const_iterator old = *this;
@@ -81,6 +90,7 @@ private:
                 return old;
             }
             
+            // check if iterator is equal or not equal to some constant iterator
             bool operator== ( const const_iterator & rhs ) const
             { return current == rhs.current; }
             
@@ -214,6 +224,7 @@ public:
     bool empty( ) const
     { return size( ) == 0; }
     
+    // clear out the list: do this one element at a time
     void clear( )
     {
         while( !empty( ) )
@@ -267,6 +278,7 @@ public:
         return retVal;
     }
     
+    // erase elements from iterator start to iterator end
     iterator erase( iterator start, iterator end )
     {
         for( iterator itr = start; itr != end; )
@@ -274,6 +286,10 @@ public:
         
         return end;
     }
+
+    // swap 2 elements at iterator itr location
+    // elements in list: ... [p-2] [p-1] [p] [p+1] [p+2] ...
+    // This function will swap place of [p-1] and [p+1]
     void swapNeighbors(iterator itr)
     {
         Node *p = itr.current;
@@ -335,13 +351,15 @@ int main()
     
 	List<int>::iterator itr = myL.begin();
     
+    // make iterator points to the 4th element
 	for (int j = 0; j < 4; j++)
     {
         itr++;
 	}
+    cout << "begin swaping neighbors of element: " << *itr << endl;
 	myL.swapNeighbors(itr);
 	printCollection(myL, cout);
     
-    
+    // end program
 	return 0;
 }
