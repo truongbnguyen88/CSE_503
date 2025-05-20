@@ -71,6 +71,11 @@ public:
     
     /* Traversing the list and printing the value of each node */
     void traverse_and_print();
+
+    /* Traversing the list from tail to head and print.
+       This is to check that we can access parent node of current node 
+    */
+    void print_from_tail_to_head();
 	
 	void push_back(int val);
 };
@@ -110,6 +115,25 @@ void LinkedList::traverse_and_print()
         cout << p->value << " ";
         /* The pointer moves along to the next one */
         p = p->pNext;
+    }
+    cout << endl;
+}
+
+void LinkedList::print_from_tail_to_head()
+{
+    Node *p = pTail;
+    /* The list is empty? */
+    if (pTail == NULL) {
+        cout << "The list is empty" << endl;
+        return;
+    }
+
+    cout << "LinkedList (from tail node to head node): ";
+    while (p != NULL) { /* while there are some more nodes left */
+        /* output the value */
+        cout << p->value << " ";
+        /* The pointer moves along to the next one */
+        p = p->pPrev;
     }
     cout << endl;
 }
@@ -162,5 +186,6 @@ int main(int argc, const char * argv[])
 		list2.push_back(i);
 	}
 	list2.traverse_and_print();
+    list2.print_from_tail_to_head();
     return 0;
 }
