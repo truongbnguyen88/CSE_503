@@ -119,6 +119,9 @@ void LinkedList::traverse_and_print()
     cout << endl;
 }
 
+/* This function is similar to traverse_and_print() but instead of printing from begin to end,
+   this function will print element values from end to begin 
+*/
 void LinkedList::print_from_tail_to_head()
 {
     Node *p = pTail;
