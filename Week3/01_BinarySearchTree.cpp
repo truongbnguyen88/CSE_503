@@ -134,13 +134,13 @@ class BinarySearchTree
 				remove(x, t->right);
 			else if (t->left != NULL && t->right != NULL) // Two children
 			{
-				t->element = findMin(t->right)->element;
+				t->element = findMin(t->right)->element; // find smallest in right subtree
 				remove(t->element, t->right);
 			}
 			else
 			{
 				BinaryNode *oldNode = t;
-				t = (t->left != NULL) ? t->left : t->right;
+				t = (t->left != NULL) ? t->left : t->right; // Replace t with its left child if it exists, otherwise use its right child.
 				delete oldNode;
 			}
 		}
@@ -148,6 +148,10 @@ class BinarySearchTree
 		 * Internal method to find the smallest item in a subtree t.
 		 * Return node containing the smallest item.
 		 */
+		// Since lesser-value elements are always on the left, we can find the minimum by traversing left.
+		// If the left child is NULL, then we have found the minimum.
+		// If the left child is not NULL, we continue traversing left until we reach a NULL left child.
+		// This is a recursive approach to find the minimum element in a binary search tree.
 		BinaryNode * findMin(BinaryNode *t) const
 		{
 			if (t == NULL)
@@ -160,6 +164,10 @@ class BinarySearchTree
 		 * Internal method to find the largest item in a subtree t.
 		 * Return node containing the largest item.
 		 */
+		// Since greater-value elements are always on the right, we can find the maximum by traversing right.
+		// If the right child is NULL, then we have found the maximum.
+		// If the right child is not NULL, we continue traversing right until we reach a NULL right child.
+		// This is a recursive approach to find the maximum element in a binary search tree.
 		BinaryNode * findMax(BinaryNode *t) const
 		{
 			if (t != NULL)
@@ -177,9 +185,9 @@ class BinarySearchTree
 		{
 			if (t == NULL)
 				return false;
-			else if (x < t->element)
+			else if (x < t->element) // If x is less than the current node's element, search in the left subtree.
 				return contains(x, t->left);
-			else if (t->element < x)
+			else if (t->element < x) // If x is greater than the current node's element, search in the right subtree.
 				return contains(x, t->right);
 			else
 				return true; // Match
@@ -200,6 +208,9 @@ class BinarySearchTree
 		/**
 		 * Internal method to compute the height of a subtree rooted at t.
 		 */
+		// The height of a binary tree is the number of edges on the longest path from the root to a leaf node.
+		// If the tree is empty, the height is -1.
+		// If the tree is not empty, the height is 1 plus the maximum height of its left and right subtrees.
 		int height(BinaryNode *t)
 		{
 			if (t == NULL)

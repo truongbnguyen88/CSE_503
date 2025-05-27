@@ -22,7 +22,7 @@ int main()
 	}
 	else
 	{
-		cout << itr->first << " " << itr->second << endl;
+		cout << itr->first << " " << itr->second << endl; // first is the key (name), second is the value (salary in $)
 	} // end if else
 	cout << endl;
 

@@ -17,8 +17,9 @@ int main()
 	itr = s.begin();
 
 	int sum = *itr;
+	cout << "s is " << *itr << endl;
 
-	for (itr = s.begin(); itr != s.end(); itr++)
+	for (itr = ++s.begin(); itr != s.end(); itr++)
 	{
 		cout << "s is " << *itr << endl;
 		sum = sum + *itr;
@@ -29,7 +30,8 @@ int main()
 	s.erase(2);
 	itr = s.begin();
 	sum = *itr;
-	for (itr = s.begin(); itr != s.end(); itr++)
+	cout << "s is " << *itr << endl;
+	for (itr = ++s.begin(); itr != s.end(); itr++)
 	{
 		cout << "s is " << *itr << endl;
 		sum = sum + *itr;
@@ -42,7 +44,8 @@ int main()
 	s.erase(itr);
 	itr = s.begin();
 	sum = *itr;
-	for (itr = s.begin(); itr != s.end(); itr++)
+	cout << "s is " << *itr << endl;
+	for (itr = ++s.begin(); itr != s.end(); itr++)
 	{
 		cout << "s is " << *itr << endl;
 		sum = sum + *itr;
