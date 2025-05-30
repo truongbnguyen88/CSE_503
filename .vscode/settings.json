@@ -47,6 +47,11 @@
         "variant": "cpp",
         "vector": "cpp",
         "algorithm": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "__tree": "cpp",
+        "list": "cpp",
+        "map": "cpp",
+        "fstream": "cpp",
+        "iomanip": "cpp"
     }
 }
