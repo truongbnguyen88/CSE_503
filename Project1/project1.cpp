@@ -19,6 +19,7 @@ struct Node {
 class Trie {
 public:
 
+    /* ----------- insert to trie tree ----------- */
     void insert(std::string w){
         // loop through every character in the word and convert each character to lowercase
         for(char& c:w)
@@ -36,6 +37,7 @@ public:
         return;
     }
 
+    /* ----------- word autocomplete ----------- */
     vector<string> autocomplete(string prefix, size_t max_suggestion=50) const {
         /* Start with some prefix e.g., 'appl' & return a list of words that start with this particular prefix
            Maximum number of suggestions is given by parameter max_suggestion. 
@@ -46,8 +48,8 @@ public:
         // again, start @ root
         const Node* cur = &root_;
         // loop through each character in the prefix
-        for(char ch:prefix){
-            size_t idx = ch - 'a';          // get the index of the character in alphabetical order (0 for 'a', 1 for 'b', ..., 25 for 'z')
+        for(char char_:prefix){
+            size_t idx = char_ - 'a';          // get the index of the character in alphabetical order (0 for 'a', 1 for 'b', ..., 25 for 'z')
             if(idx>=26 || !cur->child[idx]) // if index is out of bounds (not a-z) or the child node does not exist, return empty vector
                 return {}; 
             cur = cur->child[idx];          // set current node to the child node corresponding to the current character
@@ -63,9 +65,9 @@ public:
         return out;
     }
 
-    /* ---------------- NEW: recommendation search ----------- */
-    std::vector<std::string> recommend(std::string query,
-                                       std::size_t max = 20) const
+    /* ----------- recommendation search ----------- */
+    vector<string> recommend(string query,
+                                       size_t max = 20) const
     {
         for (char& c : query)
             c = std::tolower(static_cast<unsigned char>(c)); // convert to lowercase
@@ -91,6 +93,21 @@ public:
         std::vector<std::string> out;
         out = autocomplete(prefix, max); // call autocomplete with the prefix and max number of suggestions
         return out;
+    }
+
+    bool is_word_in_trie(const string word) const
+    {
+        for (char c:word)
+            c = std::tolower(static_cast<unsigned char>(c)); // convert to lowercase
+
+        const Node* curr_node = &root_; // start at root node
+        for (char char_:word) {
+            std::size_t idx = char_ - 'a';      // get the index of the character in alphabetical order
+            if (idx >= 26 || !curr_node->child[idx])
+                return false;                   // if index is out of bounds or child node does not exist, return false
+            curr_node = curr_node->child[idx];  // move to the child node corresponding to the current character
+        }
+        return curr_node->is_word;              // return true if the current node is a word, false otherwise
     }
 
 private:
@@ -144,7 +161,7 @@ int main() {
     }
     cout << "Done" << endl;
 
-    // Example usage
+    // Part II: Autocomplete
     string prefix;
     cout << "\nPart II: Enter a prefix to autocomplete: ";
     cin >> prefix;
@@ -154,9 +171,13 @@ int main() {
         cout << suggestion << '\n';
     }
 
-    // 
-    cout << "\nPart III: Word recommendation: ";
-    auto recommended_suggestions = trie.recommend("thegh", 10);   // misspelled “apple”
+    // Part III: word recommendation
+    cout << "\nPart III: Word recommendations: ";
+    string query;
+    cout << "Enter search query: ";
+    cin >> query;
+    // perform words recommendation based on the query
+    auto recommended_suggestions = trie.recommend(query, 10);   // misspelled “apple”
     if (recommended_suggestions.empty())
         std::cout << "Exact match found.\n";
     else {
@@ -164,5 +185,13 @@ int main() {
         for (auto& s : recommended_suggestions) std::cout << "  " << s << '\n';
     }
 
+    // Extra: Check if a word is in the trie
+    string check_word = query;
+    cout << "\nWe check whether the word '" << check_word << "' is in the trie.\n";
+    if (trie.is_word_in_trie(check_word)) {
+        cout << check_word << " is in the trie.\n";
+    } else {
+        cout << check_word << " is not in the trie.\n";
+    }
     return 0;
 }
