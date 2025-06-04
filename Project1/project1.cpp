@@ -19,128 +19,96 @@ struct Node {
 class Trie {
 public:
 
-    // /* ----------- insert to trie tree ----------- */
-    // void insert(std::string w){
-    //     // loop through every character in the word and convert each character to lowercase
-    //     for(char& c:w)
-    //         c = tolower(static_cast<unsigned char>(c));
-    //     // create & start at root
-    //     Node* cur = &root_;
-    //     // loop through each character in the word
-    //     for(char ch:w){
-    //         size_t idx = ch - 'a'; // get the index of the alphabetical character (0 for 'a', 1 for 'b', ..., 25 for 'z')
-    //         if(!cur->child[idx])   // if the current node's child of char 'ch' is null, create a new Node.
-    //             cur->child[idx] = new Node;
-    //         cur = cur->child[idx]; // then move to the (newly created/already existed) child node corresponding to the current character
-    //     }
-    //     cur->is_word = true;       // mark the end of the word. In particular, the word is stored and we mark the flag is_word as true.
-    //     return;
-    // }
-
-    // /* ----------- word autocomplete ----------- */
-    // vector<string> autocomplete(string prefix, size_t max_suggestion=50) const {
-    //     /* Start with some prefix e.g., 'appl' & return a list of words that start with this particular prefix
-    //        Maximum number of suggestions is given by parameter max_suggestion. 
-    //     */
-    //     // convert every character in the prefix to lowercase
-    //     for(char& c:prefix) 
-    //         c = tolower(static_cast<unsigned char>(c));
-    //     // again, start @ root
-    //     const Node* cur = &root_;
-    //     // loop through each character in the prefix
-    //     for(char char_:prefix){
-    //         size_t idx = char_ - 'a';          // get the index of the character in alphabetical order (0 for 'a', 1 for 'b', ..., 25 for 'z')
-    //         if(idx>=26 || !cur->child[idx]) // if index is out of bounds (not a-z) or the child node does not exist, return empty vector
-    //             return {}; 
-    //         cur = cur->child[idx];          // set current node to the child node corresponding to the current character
-    //     }
-    //     // if we reach here, it means trie has the path to this prefix. Proceed to collect all words that start with this prefix.
-    //     vector<string> out;
-    //     string buffer = prefix;
-    //     // create a lambda function to collect words that start with the prefix
-    //     // the syntax [&]() captures all variables by reference, allow us to modify 'out' vector
-    //     Collector collector{out, max_suggestion};
-    //     // perform a depth-first-search starting from the current node and maintaining the prefix stored in 'buf'
-    //     depth_first_search(cur, buffer, collector);
-    //     return out;
-    // }
-
-    /* ----------- insert word OR phrase ----------- */
-    void insert(std::string text)           // e.g.  "binary search tree"
-    {
-        /* 0. Normalise the whole input to lowercase */
-        for (char& c : text)
-            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-
-        /* 1. Split on spaces and insert each token separately */
-        std::string word;
-        Node*      cur;                     // reused per token
-
-        auto flush_word = [&](void) {
-            if (word.empty()) return;       // skip double-spaces
-
-            cur = &root_;
-            for (char ch : word) {          // <----- *unchanged inner loop*
-                std::size_t idx = ch - 'a'; // assumes 'a'..'z'
-                if (idx >= 26) return;      // ignore non-letters defensively
-                if (!cur->child[idx])
-                    cur->child[idx] = new Node;
-                cur = cur->child[idx];
-            }
-            cur->is_word = true;            // mark the token as a stored word
-            word.clear();                   // ready for next token
-        };
-
-        for (char ch : text) {
-            if (ch == ' ')
-                flush_word();               // finished one token
-            else
-                word.push_back(ch);         // keep building the token
-        }
-        flush_word();                       // flush the last token (if any)
+    static inline std::size_t map_idx(char ch) {
+        if (ch == ' ')      return 26;           // space
+        if ('a' <= ch && ch <= 'z')
+            return static_cast<std::size_t>(ch - 'a');
+        throw std::runtime_error("unsupported character");
     }
 
-    vector<string> autocomplete(string query,
-        size_t max_suggestion = 50) const
+    /* ----------- insert to trie tree ----------- */
+    void insert(std::string w){
+        // loop through every character in the word and convert each character to lowercase
+        for(char& c:w)
+            c = tolower(static_cast<unsigned char>(c));
+        // create & start at root
+        Node* cur = &root_;
+        // loop through each character in the word
+        for(char ch:w){
+            size_t idx = ch - 'a'; // get the index of the alphabetical character (0 for 'a', 1 for 'b', ..., 25 for 'z')
+            if(!cur->child[idx])   // if the current node's child of char 'ch' is null, create a new Node.
+                cur->child[idx] = new Node;
+            cur = cur->child[idx]; // then move to the (newly created/already existed) child node corresponding to the current character
+        }
+        cur->is_word = true;       // mark the end of the word. In particular, the word is stored and we mark the flag is_word as true.
+        return;
+    }
+
+    /* ----------- insert word OR phrase ----------- */
+    void insert_extended_ver(std::string text)
     {
-        /* 0. Normalise case */
-        for (char& c : query)
-        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        /* 0. normalise:   – lower-case letters
+                        – replace any run of blanks with a single ' '       */
+        std::string cleaned;
+        cleaned.reserve(text.size());
 
-        /* 1. Split at the LAST space, if any */
-        const auto last_space = query.rfind(' ');
-        string fixed_part;                   // "binary "     – stays untouched
-        string token;                        // "se"          – we’ll complete this
-
-        if (last_space == string::npos) {    // no space → whole query is one token
-        token      = query;
-        } else {
-        fixed_part = query.substr(0, last_space + 1);   // keep the trailing ' '
-        token      = query.substr(last_space + 1);      // may be empty
+        bool prev_space = false;
+        for (unsigned char ch : text) {
+            if (std::isspace(ch)) {                 // treat all whitespace alike
+                if (!prev_space) {                  // collapse runs of blanks
+                    cleaned.push_back(' ');
+                    prev_space = true;
+                }
+            } else if ('A' <= ch && ch <= 'Z') {
+                cleaned.push_back(static_cast<char>(ch + ('a' - 'A')));  // to lower
+                prev_space = false;
+            } else if ('a' <= ch && ch <= 'z') {
+                cleaned.push_back(static_cast<char>(ch));
+                prev_space = false;
+            }
+            /* else: skip punctuation / digits quietly */
         }
+        /* trim a possible trailing space introduced above */
+        if (!cleaned.empty() && cleaned.back() == ' ')
+            cleaned.pop_back();
+        if (cleaned.empty()) return;                // nothing to store
 
-        /* 2. === ORIGINAL single-word logic on `token` === */
-        // -------------------------------------------------
+        /* 1. walk / create nodes for every char (letters + spaces) */
+        Node* cur = &root_;
+        for (char ch : cleaned) {
+            std::size_t idx = map_idx(ch);          // 0-25 letters, 26 space
+            if (!cur->child[idx]) cur->child[idx] = new Node;
+            cur = cur->child[idx];
+        }
+        cur->is_word = true;                        // mark end of word/phrase
+    }
+
+    /* ----------- word autocomplete ----------- */
+    vector<string> autocomplete(string prefix, size_t max_suggestion=50) const {
+        /* Start with some prefix e.g., 'appl' & return a list of words that start with this particular prefix
+           Maximum number of suggestions is given by parameter max_suggestion. 
+        */
+        // convert every character in the prefix to lowercase
+        for(char& c:prefix) 
+            c = tolower(static_cast<unsigned char>(c));
+        // again, start @ root
         const Node* cur = &root_;
-        for (char ch : token) {
-        size_t idx = ch - 'a';
-        if (idx >= 26 || !cur->child[idx])
-        return {};                    // prefix not present
-        cur = cur->child[idx];
+        // loop through each character in the prefix
+        for(char char_:prefix){
+            size_t idx = char_ - 'a';          // get the index of the character in alphabetical order (0 for 'a', 1 for 'b', ..., 25 for 'z')
+            if(idx>=26 || !cur->child[idx]) // if index is out of bounds (not a-z) or the child node does not exist, return empty vector
+                return {}; 
+            cur = cur->child[idx];          // set current node to the child node corresponding to the current character
         }
-
-        vector<string> words;                 // completions for *token*
-        string buffer = token;
-        Collector collector{words, max_suggestion};
+        // if we reach here, it means trie has the path to this prefix. Proceed to collect all words that start with this prefix.
+        vector<string> out;
+        string buffer = prefix;
+        // create a lambda function to collect words that start with the prefix
+        // the syntax [&]() captures all variables by reference, allow us to modify 'out' vector
+        Collector collector{out, max_suggestion};
+        // perform a depth-first-search starting from the current node and maintaining the prefix stored in 'buf'
         depth_first_search(cur, buffer, collector);
-
-        /* 3.  Re-attach the untouched prefix section */
-        vector<string> results;
-        results.reserve(words.size());
-        for (auto& w : words)
-        results.emplace_back(fixed_part + w);
-
-        return results;                       // full phrase suggestions
+        return out;
     }
 
     /* ----------- recommendation search ----------- */
@@ -173,51 +141,47 @@ public:
         return out;
     }
 
-    bool is_word_in_trie(const string word) const
+    vector<string> phrases_autocomplete(string prefix,
+        size_t max = 50) const
     {
-        for (char c:word)
-            c = std::tolower(static_cast<unsigned char>(c)); // convert to lowercase
+        for (char& c : prefix)
+            c = static_cast<char>(std::tolower((unsigned char)c));
 
-        const Node* curr_node = &root_; // start at root node
-        for (char char_:word) {
-            std::size_t idx = char_ - 'a';      // get the index of the character in alphabetical order
-            if (idx >= 26 || !curr_node->child[idx])
-                return false;                   // if index is out of bounds or child node does not exist, return false
-            curr_node = curr_node->child[idx];  // move to the child node corresponding to the current character
+        const Node* cur = &root_;
+        for (char ch : prefix) {                  // walk prefix incl. spaces
+            std::size_t idx = map_idx(ch);
+            if (!cur->child[idx]) return {};
+            cur = cur->child[idx];
         }
-        return curr_node->is_word;              // return true if the current node is a word, false otherwise
+
+        vector<string> out;
+        string buffer = prefix;
+        Collector collector{out, max};
+        depth_first_search(cur, buffer, collector);
+        return out;
     }
 
-    vector<string> autocomplete_phrase(string phrase,
-        size_t max = 20) const
+    /* ----------- recommendation search ----------- */
+    std::vector<std::string> phrases_recommendation(std::string query,
+        std::size_t max = 20) const
     {
-        // 1. Normalise case
-        for (char& c : phrase)
-        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        for (char& c : query)
+            c = static_cast<char>(std::tolower((unsigned char)c));
 
-        // 2. Split at the *last* space
-        const auto pos = phrase.rfind(' ');
-        string fixed_part;                       // everything up to and incl. last space
-        string last_token;                       // what user is currently typing
+        /* 1. Walk as far as the trie matches the query */
+        const Node* cur = &root_;
+        std::string prefix;
 
-        if (pos == string::npos) {               // single word so far
-        fixed_part.clear();
-        last_token = phrase;                 // whole phrase = token
-        } else {
-        fixed_part = phrase.substr(0, pos + 1); // keep the trailing space
-        last_token = phrase.substr(pos + 1);    // may be empty if phrase ends in ' '
+        for (char ch : query) {
+            std::size_t idx = map_idx(ch);          //  <-- unified helper
+            if (!cur->child[idx]) break;            //  no further match
+            cur = cur->child[idx];
+            prefix.push_back(ch);
         }
 
-        // 3. Delegate to the existing word-level autocomplete
-        vector<string> words = autocomplete(last_token, max);
-
-        // 4. Re-attach the unchanged prefix
-        vector<string> results;
-        results.reserve(words.size());
-        for (auto& w : words)
-        results.emplace_back(fixed_part + w);
-
-        return results;
+        /* 2. Collect completions under the longest-matched prefix
+        (even if the query itself is already a stored word)        */
+        return phrases_autocomplete(prefix, max);
     }
 
 private:
@@ -226,7 +190,7 @@ private:
     // here we use a template to allow any callable type (function, lambda, structure, etc.) to be passed
     // and since we are using a structure (collector) to collect words, we can use a template to make generic pass
     template<class WC>
-    static void depth_first_search(const Node* curr_node, std::string& prefix_, WC& words_collection){
+    static void depth_first_search_old(const Node* curr_node, std::string& prefix_, WC& words_collection){
         if(curr_node->is_word) {
             words_collection(prefix_);              // sanity check: if the current node is a word, append prefix_ to word collection b/c it is a word at this point
         }
@@ -235,6 +199,22 @@ private:
                 prefix_.push_back(char('a'+i));     // found character, push_back it to the prefix
                 depth_first_search(curr_node->child[i], prefix_, words_collection);  // recursive call to go deeper into the trie with root now @ child node of n
                 prefix_.pop_back();                 // under chacracter to restore
+            }
+    }
+
+    template<class V>
+    static void depth_first_search(const Node* n,
+                                std::string& pre,
+                                V& vis)
+    {
+        if (n->is_word) vis(pre);
+
+        for (std::size_t i = 0; i < 27; ++i)
+            if (n->child[i]) {
+                pre.push_back(i == 26 ? ' '     // space branch
+                                    : char('a' + static_cast<int>(i)));
+                depth_first_search(n->child[i], pre, vis);
+                pre.pop_back();
             }
     }
 
@@ -254,81 +234,109 @@ private:
 
 
 
-// int main() {
-//     cout << "\nPart I: Read Dictionary.txt, create a Trie and add words (from Dictionary.txt) to trie: " << endl;
-//     // load dictionary from file
-//     vector<string> dictionary;
-//     ifstream file("Dictionary.txt");
-//     string word;
-//     while (file >> word) {
-//         dictionary.push_back(word);
-//     }
-
-//     Trie trie;
-//     // loop through each word in the dictionary and insert it into the trie using insert() method
-//     for (const auto& word : dictionary) {
-//         trie.insert(word);
-//     }
-//     cout << "Done" << endl;
-
-//     // Part II: Autocomplete
-//     string prefix;
-//     cout << "\nPart II: Enter a prefix to autocomplete: ";
-//     cin >> prefix;
-//     // auto suggestions = trie.autocomplete(prefix, 10);
-//     // cout << "Suggestions:\n";
-//     // for (const auto& suggestion : suggestions) {
-//     //     cout << suggestion << '\n';
-//     // }
-
-//     auto suggestions = trie.autocomplete(prefix, 10); // use autocomplete_phrase to get suggestions for the prefix
-//     cout << "Suggestions:\n";
-//     for (const auto& suggestion : suggestions) {
-//         cout << suggestion << '\n';
-//     }
-
-//     // Part III: word recommendation
-//     cout << "\nPart III: Word recommendations: ";
-//     string query;
-//     cout << "Enter search query: ";
-//     cin >> query;
-//     // perform words recommendation based on the query
-//     auto recommended_suggestions = trie.recommend(query, 10);   // misspelled “apple”
-//     if (recommended_suggestions.empty())
-//         std::cout << "Exact match found.\n";
-//     else {
-//         std::cout << "Did you mean:\n";
-//         for (auto& s : recommended_suggestions) std::cout << "  " << s << '\n';
-//     }
-
-//     // Extra: Check if a word is in the trie
-//     string check_word = query;
-//     cout << "\nWe check whether the word '" << check_word << "' is in the trie.\n";
-//     if (trie.is_word_in_trie(check_word)) {
-//         cout << check_word << " is in the trie.\n";
-//     } else {
-//         cout << check_word << " is not in the trie.\n";
-//     }
-//     return 0;
-// }
-
 int main() {
+    cout << "\nPart I: Read Dictionary.txt, create a Trie and add words (from Dictionary.txt) to trie: " << endl;
+    // load dictionary from file
+    vector<string> dictionary;
+    ifstream file("Dictionary.txt");
+    string word;
+    while (file >> word) {
+        dictionary.push_back(word);
+    }
+
     Trie trie;
+    // loop through each word in the dictionary and insert it into the trie using insert() method
+    for (const auto& word : dictionary) {
+        trie.insert(word);
+    }
+    cout << "Done" << endl;
 
-    /* --- 1. insert single words --- */
-    trie.insert("apple");
-    trie.insert("apply");
+    // Part II: Autocomplete
+    string prefix;
+    cout << "\nPart II: Enter a prefix to autocomplete: ";
+    cin >> prefix;
+    // auto suggestions = trie.autocomplete(prefix, 10);
+    // cout << "Suggestions:\n";
+    // for (const auto& suggestion : suggestions) {
+    //     cout << suggestion << '\n';
+    // }
 
-    /* --- 2. insert whole phrases (tokens are added word-by-word) --- */
-    trie.insert("binary search");
-    trie.insert("binary search tree");
-    trie.insert("breadth first search");
+    auto suggestions = trie.autocomplete(prefix, 10); // use autocomplete_phrase to get suggestions for the prefix
+    cout << "Suggestions:\n";
+    for (const auto& suggestion : suggestions) {
+        cout << suggestion << '\n';
+    }
 
-    /* --- 3. try autocompleting the *current* token in a phrase --- */
-    for (auto& s : trie.autocomplete("binary se", 5))
+    // Part III: word recommendation
+    cout << "\nPart III: Word recommendations: ";
+    string query;
+    cout << "Enter search query: ";
+    cin >> query;
+    // perform words recommendation based on the query
+    auto recommended_suggestions = trie.recommend(query, 10);   // misspelled “apple”
+    if (recommended_suggestions.empty())
+        cout << "Exact match found.\n";
+    else {
+        cout << "Did you mean:\n";
+        for (auto& s : recommended_suggestions) std::cout << "  " << s << '\n';
+    }
+
+    /* For Dictionary that has phrases of words and single word 
+       This is to test the ability of class Trie to handle phrases and words.
+       We will use a different dictionary file that contains phrases of words and also single words.
+       The file is called cs_phrases_500k_sorted.txt. 
+       To obtain this text file, I asked ChatGPT to generate.
+            Basically it contains 500,000 phrases or single words. 
+            These phrases and words related to computer sciences.
+            These phrases and words are sorted in alphabetical order and have the starting characters ranging from a-z.
+        The original file, provided by the course instructors, only contains single words.
+    */
+    Trie trie_extended;
+
+    cout << "\n\nWord Autocomplete & Recommendation for both single words & phrase" << endl;
+
+    cout << "\nFirst, Read cs_phrases_500k_sorted.txt, create a Trie and add words (from cs_phrases_500k_sorted.txt) to trie: " << endl;
+    ifstream in("cs_phrases_500k_sorted.txt");
+    vector<string> dictionary_of_phrases; // create a different vector of string to hold phrases / single words
+    string line;
+    while (getline(in, line))        // read each line from the file
+        if (!line.empty())                // skip blank/empty lines
+            dictionary_of_phrases.push_back(line);
+
+    /* Build the trie using the extended version of insert() function 
+       Recall: this version of insert() function takes into account spacing. Therefore, it can also handle phrases.
+    */
+    for (const auto& phrase : dictionary_of_phrases)
+        trie_extended.insert_extended_ver(phrase);
+
+    // string phrase;
+    // cout << "Enter a phrase: ";
+    // getline(cin, phrase); 
+    // cout << "You entered: " << phrase << endl;
+    // return 0;
+    
+    /* autocompleting (same as previous) but the search query is a single incomplete word */
+    cout << "\nSecond, Enter a prefix to autocomplete (prefering incomplete single word): ";
+    cin >> prefix;
+    for (auto& s : trie_extended.phrases_autocomplete(prefix, 5))
         std::cout << s << '\n';
 
-    /* --- 4. stand-alone word completion still works --- */
-    for (auto& s : trie.autocomplete("app", 5))
+    /* autocompleting (same as previous) but the search query is an incomplete phrase */
+    cout << "\nEnter a prefix to autocomplete (prefering incomplete phrase): ";
+    std::getline(cin >> ws, prefix);   // std::ws consumes leading whitespace
+    for (auto& s : trie_extended.phrases_autocomplete(prefix, 5))
         std::cout << s << '\n';
+
+    /* word recommendation*/
+    cout << "\nThird, Enter a query (prefering incomplete single word) where the word is spelled wrong: ";
+    cin >> query;
+    for (auto& s : trie_extended.phrases_recommendation(query, 5))
+        std::cout << s << '\n';
+
+    cout << "\nEnter a query (prefering incomplete phrase) where the phrase is spelled wrong: ";
+    std::getline(cin >> ws, query);   // std::ws consumes leading whitespace
+    for (auto& s : trie_extended.phrases_recommendation(query, 5))
+        std::cout << s << '\n';
+
+    return 0;
 }
