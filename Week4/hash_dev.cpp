@@ -1,4 +1,3 @@
-
 #include<iostream>
 #include <random>
 
@@ -22,13 +21,18 @@ private:
       int capacity;                 // maximum size of hash table, this can change during rehashing
       int size;                     // current size of hash table, i.e., number of elements in the table
 
-      // hash function to compute the index in the table right now we use a simple modulus operation
-      int hash_func(int value, int table_size) {
+      // A more complicated hash function using a combination of modulus, bitwise operations, and prime multiplication
+      int complex_hash_func(int value, int table_size) {
+            const int prime = 41;                 // Use small prime number for mixing
+            value = ((value >> 4)^value) * prime; // Mix the bits and multiply by prime
+            return value % table_size;
+      }
+      int simple_hash_func(int value, int table_size) {
             return value % table_size;
       }
 
       void rehash() {
-            cout << "perform rehashing" << endl;
+            cout << "rehash(): perform rehashing" << endl;
             // create a temporary variable to store the current capacity --> old_capacity
             // do the same for HashMap's table
             int old_capacity = capacity;
@@ -85,16 +89,18 @@ public:
       /* get() will take in a integer value and compute hash-index that we can put value in the HashMap table */
       int get(int value) {
             // first, compute the hash index using the hash function
-            int hash = hash_func(value, capacity);
+            int hash = complex_hash_func(value, capacity);
             // Here, we're gonna find an index where there is no value is stored.
             // I.e., we need to find the index where NULL_PTR[such_index] is NULL and the input value is not yet inserted.
             // We are using quadratic probling to resolve values-collisions
             int j = 0;
-            while (table[(hash + j*j)%capacity] != NULL && table[(hash + j*j)%capacity]->getKey() != value) 
+            while (table[complex_hash_func(hash + j*j, capacity)] != NULL && 
+                   table[complex_hash_func(hash + j*j, capacity)]->getKey() != value) {
                   j++;
                   if (j == capacity) return -1; // if we looped through the whole table and didn't find it, return -1 to avoid infinite loop
+            }
             // re-compute correct hash index once we found the appropriate position
-            hash = (hash + j*j) % capacity;
+            hash = complex_hash_func(hash + j*j, capacity);  // again quadratic probing.
             // A quick trick that I've learned: to double check if value is in the table:
             // if table[hash] is NULL, then value is not in the table, return -1
             // if not, then extract the key.
@@ -118,20 +124,23 @@ public:
             if (load_factor > LOAD_FACTOR_THRESHOLD) {
                   rehash();
             }
-            // Similar to get(), we compute hash index in the HashMap table for the input value
-            int hash = hash_func(value, capacity);
+            // // Similar to get(), we compute hash index in the HashMap table for the input value
+            int hash = complex_hash_func(value, capacity);
             int j = 0;
-            while (table[(hash + j*j)%capacity] != NULL && table[(hash + j*j)%capacity]->getKey() != value) {
+            while (table[complex_hash_func(hash + j*j, capacity)] != NULL && 
+                   table[complex_hash_func(hash + j*j, capacity)]->getKey() != value) {
                   j++;
+                  if (j == capacity) return; // if we looped through the whole table and didn't find it, return to avoid infinite loop
             }
-            hash = (hash + j*j) % capacity; // compute correct hash index
+            hash = complex_hash_func(hash + j*j, capacity); // compute correct hash index
             table[hash] = new HashEntry(value);
             size++;     // after we successfully insert a value, we increase the size of the HashMap 
       }
 
       void display() const {
+            cout << "\nDisplaying HashMap table:" << endl;
             for (int i = 0; i < capacity; ++i) {
-                std::cout << "hash_index " << i << ": " << (table[i] ? to_string(table[i]->getKey()) : "__null_ptr__") << std::endl;
+                  cout << "hash_index " << i << ": " << (table[i] ? to_string(table[i]->getKey()) : "__null_ptr__") << endl;
             }
         }
  
@@ -160,6 +169,9 @@ int main(int argc, const char * argv[])
       myHashMap.insert(47);
       myHashMap.insert(66);
 
+      /* Try generate random integer to insert to myHashMap 
+         Goal: to see how rehashing works in the case of larger number of insertions
+      */
       // random_device rd;                            // set random seed
       // mt19937 gen(rd());  
       // uniform_int_distribution<> distr(1, 1000);
@@ -168,11 +180,11 @@ int main(int argc, const char * argv[])
       //       myHashMap.insert(random_value);
       // }
 
-      cout << myHashMap.get(53) << endl;
-      cout << myHashMap.get(12) << endl;
-
       myHashMap.display();
+
+      cout << "\nCheck if an integer is in myHashMap: return same integer if it exists, -1 otherwise" << endl;
+      cout << "Check 53: " << myHashMap.get(53) << endl;
+      cout << "Check 12: " << myHashMap.get(12) << endl;
+
       return 0;
 }
-
-
