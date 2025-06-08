@@ -22,15 +22,15 @@ struct Node {
 class Trie {
 public:
 
-    static inline std::size_t map_idx(char ch) {
-        if (ch == ' ')      return 26;           // space
-        if ('a' <= ch && ch <= 'z')
-            return static_cast<std::size_t>(ch - 'a');
+    static inline size_t map_idx(char ch) {
+        if (ch == ' ')      return 26;              // if space then index = 26
+        if ('a' <= ch && ch <= 'z')                 // if regular character then 'a'=0, 'b'=1, ..., 'z'=25
+            return static_cast<size_t>(ch - 'a');
         throw std::runtime_error("unsupported character");
     }
 
     /* ----------- insert to trie tree ----------- */
-    void insert(std::string w){
+    void insert(string w){
         // loop through every character in the word and convert each character to lowercase
         for(char& c:w)
             c = tolower(static_cast<unsigned char>(c));
@@ -48,39 +48,40 @@ public:
     }
 
     /* ----------- insert word OR phrase ----------- */
-    void insert_extended_ver(std::string text)
+    void phrases_insert(std::string text)
     {
         /* 0. normalise:   – lower-case letters
                         – replace any run of blanks with a single ' '       */
-        std::string cleaned;
-        cleaned.reserve(text.size());
+        string cleaned_text;
+        cleaned_text.reserve(text.size());          // make variable cleaned having same size as input word
 
-        bool prev_space = false;
+        bool prev_space_flag = false;
         for (unsigned char ch : text) {
-            if (std::isspace(ch)) {                 // treat all whitespace alike
-                if (!prev_space) {                  // collapse runs of blanks
-                    cleaned.push_back(' ');
-                    prev_space = true;
+            if (isspace(ch)) {                      // if the curren character is a space treat it like a character
+                if (!prev_space_flag) {             
+                    cleaned_text.push_back(' ');    // if found a space, push it to the cleaned text variable
+                    prev_space_flag = true;         // set prev_space_flag to true since we just found a space
                 }
-            } else if ('A' <= ch && ch <= 'Z') {
-                cleaned.push_back(static_cast<char>(ch + ('a' - 'A')));  // to lower
-                prev_space = false;
+            } else if ('A' <= ch && ch <= 'Z') {    // otherwise, we convert letter/character to lower case and append each character to cleaned text variable
+                cleaned_text.push_back(static_cast<char>(ch + ('a' - 'A')));  // to lower
+                prev_space_flag = false;
             } else if ('a' <= ch && ch <= 'z') {
-                cleaned.push_back(static_cast<char>(ch));
-                prev_space = false;
+                cleaned_text.push_back(static_cast<char>(ch));
+                prev_space_flag = false;
             }
-            /* else: skip punctuation / digits quietly */
+            /* Remark: we're gonna skip punctuation and digits */
         }
         /* trim a possible trailing space introduced above */
-        if (!cleaned.empty() && cleaned.back() == ' ')
-            cleaned.pop_back();
-        if (cleaned.empty()) return;                // nothing to store
+        if (!cleaned_text.empty() && cleaned_text.back() == ' ') // if cleaned text not empty and there is a space at the end of cleaned text
+            cleaned_text.pop_back();                             // we gonna remove that space from cleaned text
+        if (cleaned_text.empty()) return;                        // now if cleaned_text is empty then there is nothing to store
 
-        /* 1. walk / create nodes for every char (letters + spaces) */
+        /* Repeat what we did in insert(): create nodes for every char and space */
         Node* cur = &root_;
-        for (char ch : cleaned) {
-            std::size_t idx = map_idx(ch);          // 0-25 letters, 26 space
-            if (!cur->child[idx]) cur->child[idx] = new Node;
+        for (char ch : cleaned_text) {
+            std::size_t idx = map_idx(ch);                       // a-z : 0-25 letters, space : 26
+            if (!cur->child[idx]) 
+                cur->child[idx] = new Node;
             cur = cur->child[idx];
         }
         cur->is_word = true;                        // mark end of word/phrase
@@ -115,8 +116,7 @@ public:
     }
 
     /* ----------- recommendation search ----------- */
-    vector<string> recommend(string query,
-                                       size_t max = 20) const
+    vector<string> recommend(string query, size_t max = 20) const
     {
         for (char& c : query)
             c = std::tolower(static_cast<unsigned char>(c)); // convert to lowercase
@@ -144,19 +144,19 @@ public:
         return out;
     }
 
-    vector<string> phrases_autocomplete(string prefix,
-        size_t max = 50) const
+    vector<string> phrases_autocomplete(string prefix, size_t max = 50) const
     {
+        // perform lower casing for all characters
         for (char& c : prefix)
             c = static_cast<char>(std::tolower((unsigned char)c));
 
         const Node* cur = &root_;
-        for (char ch : prefix) {                  // walk prefix incl. spaces
-            std::size_t idx = map_idx(ch);
+        for (char ch : prefix) {                  // remember that here prefix include spaces
+            std::size_t idx = map_idx(ch);        // here is how we handle character or space
             if (!cur->child[idx]) return {};
             cur = cur->child[idx];
         }
-
+        // the rest should be similar to autocomplete() (for single words)
         vector<string> out;
         string buffer = prefix;
         Collector collector{out, max};
@@ -168,18 +168,19 @@ public:
     std::vector<std::string> phrases_recommendation(std::string query,
         std::size_t max = 20) const
     {
+        // perform lower-casing for characters
         for (char& c : query)
             c = static_cast<char>(std::tolower((unsigned char)c));
 
-        /* 1. Walk as far as the trie matches the query */
+        /* Create root node and some prefix */
         const Node* cur = &root_;
         std::string prefix;
 
         for (char ch : query) {
-            std::size_t idx = map_idx(ch);          //  <-- unified helper
-            if (!cur->child[idx]) break;            //  no further match
-            cur = cur->child[idx];
-            prefix.push_back(ch);
+            std::size_t idx = map_idx(ch);          // compute corresponding indices for characters (0-25) and space (26)
+            if (!cur->child[idx]) break;            // child to current node at corresponding index does not exist, move onto next char
+            cur = cur->child[idx];                  // update root node to be child at corresponding index
+            prefix.push_back(ch);                   // push character/space to prefix for recommendation task
         }
 
         /* 2. Collect completions under the longest-matched prefix
