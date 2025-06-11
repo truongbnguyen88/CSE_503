@@ -153,15 +153,15 @@ public:
         const Node* cur = &root_;
         for (char ch : prefix) {                  // remember that here prefix include spaces
             std::size_t idx = map_idx(ch);        // here is how we handle character or space
-            if (!cur->child[idx]) return {};
+            if (!cur->child[idx]) return {};      // if child to current node at corresponding index does not exist, return empty vector
             cur = cur->child[idx];
         }
         // the rest should be similar to autocomplete() (for single words)
-        vector<string> out;
-        string buffer = prefix;
-        Collector collector{out, max};
+        vector<string> output;
+        string buffer = prefix;                   // make a copy of prefix (without pass-by-reference) so that we don't modify what's in prefix
+        Collector collector{output, max};
         depth_first_search(cur, buffer, collector);
-        return out;
+        return output;
     }
 
     /* ----------- recommendation search ----------- */
@@ -178,7 +178,7 @@ public:
 
         for (char ch : query) {
             std::size_t idx = map_idx(ch);          // compute corresponding indices for characters (0-25) and space (26)
-            if (!cur->child[idx]) break;            // child to current node at corresponding index does not exist, move onto next char
+            if (!cur->child[idx]) break;            // if child to current node at corresponding index does not exist, move onto next char
             cur = cur->child[idx];                  // update root node to be child at corresponding index
             prefix.push_back(ch);                   // push character/space to prefix for recommendation task
         }
